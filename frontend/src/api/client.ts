@@ -1,15 +1,25 @@
-import axios from "axios";
+// src/api/client.ts
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-export const api = axios.create({
-    baseURL: "http://localhost:8000/api/v1",
-});
+export async function apiRequest<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = localStorage.getItem("token");
 
-api.interceptors.request.use((config) => {
-    const token = localStorage.getItem("access_token");
+  const res = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
 
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(error.detail || `HTTP ${res.status}`);
+  }
 
-    return config;
-});
+  return res.json();
+}
